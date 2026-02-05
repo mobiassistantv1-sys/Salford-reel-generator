@@ -1,19 +1,13 @@
-# Instagram Reel Video Generator Requirements
-
-# AI Text-to-Speech
-edge-tts>=6.1.0
-
 # Video Processing
-moviepy>=1.0.3
+moviepy==1.0.3
+pillow==10.2.0
 
-# Image Processing
-Pillow>=10.0.0
+# Text-to-Speech (FREE)
+gTTS==2.5.0
 
-# HTTP Requests (for Pexels API)
-requests>=2.31.0
+# AI Content Generation (FREE)
+google-generativeai==0.3.2
 
-# Audio Processing (moviepy dependency)
-pydub>=0.25.1
-
-# Additional dependencies
-numpy>=1.24.0
+# API and Utilities
+requests==2.31.0
+python-dotenv==1.0.0
