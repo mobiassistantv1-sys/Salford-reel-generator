@@ -1,149 +1,182 @@
 #!/usr/bin/env python3
 """
-每日自動生成 Salford Reel 影片
-整合內容生成 + 影片製作
+Daily Salford Reel Automation - Free Version
+使用免費服務：Google Gemini AI
 """
 
 import os
 import sys
 from datetime import datetime
+import google.generativeai as genai
 from reel_video_generator import ReelVideoGenerator
 
-# Salford 主題故事庫
+# Configuration
+PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Salford topics for daily content
 SALFORD_TOPICS = [
-    {
-        "query": "salford quays",
-        "themes": ["urban development", "waterfront", "modern architecture"]
-    },
-    {
-        "query": "salford history",
-        "themes": ["industrial heritage", "victorian era", "working class history"]
-    },
-    {
-        "query": "salford park",
-        "themes": ["green spaces", "community", "nature"]
-    },
-    {
-        "query": "salford night",
-        "themes": ["urban legends", "ghost stories", "mysterious events"]
-    },
-    {
-        "query": "salford street",
-        "themes": ["local culture", "street art", "community life"]
-    }
+    "Salford Quays history and transformation",
+    "MediaCityUK and the BBC",
+    "The Lowry Theatre and arts scene",
+    "Salford's industrial heritage",
+    "Ordsall Hall and historic buildings",
+    "Salford shopping at the Lowry Outlet",
+    "University of Salford innovation",
+    "Salford parks and green spaces",
+    "Local Salford food and restaurants",
+    "Salford Lads Club history",
+    "Chapel Street regeneration",
+    "Salford Red Devils rugby",
+    "Imperial War Museum North",
+    "Salford community and culture",
+    "Hidden gems in Salford"
 ]
 
-# 故事模板
-STORY_TEMPLATES = [
-    {
-        "title": "The Ghost of Peel Park",
-        "story": "Legend says that on foggy nights, a mysterious figure walks through Peel Park in Salford. Locals claim it is the spirit of a Victorian gentleman who once owned the land. Many have reported hearing footsteps and seeing shadows near the old gates. Whether you believe it or not, Peel Park holds many secrets.",
-        "background_query": "park fog night mysterious",
-        "hashtags": ["#Salford", "#UrbanLegend", "#PeelPark", "#GhostStory", "#Manchester"]
-    },
-    {
-        "title": "Salford Quays Transformation",
-        "story": "Once an industrial wasteland, Salford Quays has transformed into a vibrant cultural hub. From old docks to modern architecture, this area tells the story of regeneration. The BBC, Imperial War Museum, and The Lowry now call this place home. It is a testament to how cities can reinvent themselves.",
-        "background_query": "salford quays modern architecture water",
-        "hashtags": ["#SalfordQuays", "#UrbanTransformation", "#ModernCity", "#Architecture", "#Manchester"]
-    },
-    {
-        "title": "Hidden Gardens of Salford",
-        "story": "Tucked away from the busy streets, Salford has secret gardens waiting to be discovered. From community allotments to Victorian-era parks, these green spaces offer peace and tranquility. They are the lungs of the city, cherished by locals who know where to find them. Next time you visit, take a moment to explore.",
-        "background_query": "garden nature green peaceful",
-        "hashtags": ["#Salford", "#HiddenGems", "#UrbanGarden", "#Nature", "#CommunitySpaces"]
-    },
-    {
-        "title": "Salford's Industrial Heritage",
-        "story": "Salford was once the heart of the Industrial Revolution. Cotton mills, factories, and warehouses powered Britain's economy. The working-class spirit of this city shaped history. Today, old red brick buildings stand as monuments to that era. Walking through Salford is like stepping back in time.",
-        "background_query": "industrial brick building heritage",
-        "hashtags": ["#Salford", "#IndustrialHeritage", "#History", "#Manchester", "#WorkingClass"]
-    },
-    {
-        "title": "The Lowry: Art Meets Community",
-        "story": "Named after artist L.S. Lowry, The Lowry arts centre celebrates creativity and culture. It is more than just a venue. It is a gathering place for theatre, exhibitions, and performances. Thousands visit every year to experience world-class art. Salford's cultural heartbeat can be felt here.",
-        "background_query": "art gallery modern theatre lights",
-        "hashtags": ["#TheLowry", "#Salford", "#Arts", "#Culture", "#Theatre"]
-    },
-    {
-        "title": "Ordsall Hall's Dark Past",
-        "story": "Ordsall Hall is one of Salford's oldest buildings, dating back to medieval times. Rumours of hauntings and ghostly sightings have persisted for centuries. Visitors report cold spots, unexplained noises, and shadowy figures. Some say the spirits of former residents still roam the halls. Would you dare visit at night?",
-        "background_query": "old mansion historic building dark",
-        "hashtags": ["#OrdsallHall", "#Salford", "#Haunted", "#History", "#GhostStories"]
-    },
-    {
-        "title": "Street Art Revolution",
-        "story": "Salford's streets are canvases for talented artists. Vibrant murals tell stories of identity, struggle, and hope. From large-scale graffiti to hidden stencil art, creativity is everywhere. This urban art movement gives voice to the community. Salford is not just a city. It is a living gallery.",
-        "background_query": "street art mural graffiti colorful",
-        "hashtags": ["#StreetArt", "#Salford", "#UrbanArt", "#Graffiti", "#Community"]
-    },
-    {
-        "title": "The Chapel Street Revival",
-        "story": "Chapel Street was once Salford's main shopping district, bustling with life. Over the years, it fell into decline. But now, a revival is underway. New businesses, cafes, and cultural spaces are breathing life back into the area. The spirit of Chapel Street is returning, stronger than ever.",
-        "background_query": "urban street revival shops lights",
-        "hashtags": ["#ChapelStreet", "#Salford", "#UrbanRevival", "#Community", "#LocalBusiness"]
-    }
-]
+def generate_salford_story(topic):
+    """Generate Salford story using Google Gemini (FREE)"""
+    print(f"\n🤖 Generating story with Google Gemini...")
+    print(f"📌 Topic: {topic}")
+    
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY not found in environment variables")
+    
+    # Configure Gemini
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+    
+    prompt = f"""Create a short, engaging 30-second Instagram Reel script about {topic}.
 
+Requirements:
+- Write in British English
+- 60-80 words maximum (for 30 seconds of speech)
+- Start with a hook question or surprising fact
+- Include specific details about Salford
+- End with a call-to-action or interesting point
+- Write in a casual, conversational tone
+- Use simple, clear sentences
+- Focus on one main idea
 
-def select_daily_story():
-    """根據日期選擇今日故事"""
-    day_of_year = datetime.now().timetuple().tm_yday
-    story_index = day_of_year % len(STORY_TEMPLATES)
-    return STORY_TEMPLATES[story_index]
+Format: Write only the narration text, no headings or extra formatting."""
 
+    try:
+        response = model.generate_content(prompt)
+        story = response.text.strip()
+        
+        # Validate length
+        word_count = len(story.split())
+        print(f"✅ Story generated: {word_count} words")
+        
+        if word_count > 100:
+            print("⚠️  Story too long, truncating...")
+            words = story.split()[:80]
+            story = ' '.join(words) + '...'
+        
+        return story
+        
+    except Exception as e:
+        print(f"❌ Gemini API error: {e}")
+        raise
+
+def get_search_query(topic):
+    """Generate Pexels search query from topic"""
+    # Extract key terms for video search
+    if "Quays" in topic:
+        return "salford quays modern architecture waterfront"
+    elif "MediaCityUK" in topic or "BBC" in topic:
+        return "modern office building media technology"
+    elif "Lowry" in topic:
+        return "modern theatre art gallery"
+    elif "industrial" in topic:
+        return "industrial heritage factory brick building"
+    elif "Ordsall Hall" in topic:
+        return "historic english manor house"
+    elif "shopping" in topic:
+        return "modern shopping mall retail"
+    elif "University" in topic:
+        return "university campus students learning"
+    elif "park" in topic or "green" in topic:
+        return "urban park green space nature"
+    elif "food" in topic or "restaurant" in topic:
+        return "restaurant dining food british"
+    elif "Lads Club" in topic:
+        return "community center youth club"
+    elif "Chapel Street" in topic:
+        return "urban street modern development"
+    elif "rugby" in topic:
+        return "rugby match sports stadium"
+    elif "War Museum" in topic:
+        return "museum exhibition history"
+    else:
+        return "salford city modern urban"
 
 def main():
-    """主程式：生成今日 Reel"""
+    """Main automation workflow"""
+    print("=" * 50)
+    print("🎬 Daily Salford Reel Automation (FREE VERSION)")
+    print("=" * 50)
     
-    print("=" * 60)
-    print("📅 每日 Salford Reel 自動生成系統")
-    print("=" * 60)
-    print(f"⏰ 執行時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print()
+    # Check environment variables
+    if not PEXELS_API_KEY:
+        print("❌ Error: PEXELS_API_KEY not found")
+        sys.exit(1)
     
-    # 選擇今日故事
-    story = select_daily_story()
+    if not GEMINI_API_KEY:
+        print("❌ Error: GEMINI_API_KEY not found")
+        sys.exit(1)
     
-    print(f"📖 今日主題: {story['title']}")
-    print(f"🎬 背景搜尋: {story['background_query']}")
-    print()
+    print(f"✅ API keys loaded")
     
-    # 初始化影片生成器
-    generator = ReelVideoGenerator(
-        output_dir="videos/reels",
-        language="en-GB",  # 英式英語
-        video_duration=30,
-        pexels_api_key=os.getenv('PEXELS_API_KEY')
-    )
+    # Select today's topic (rotate based on day of month)
+    day_of_month = datetime.now().day
+    topic_index = day_of_month % len(SALFORD_TOPICS)
+    today_topic = SALFORD_TOPICS[topic_index]
     
-    # 生成影片
-    print("🎬 開始生成影片...\n")
+    print(f"\n📅 Today's topic: {today_topic}")
     
-    video_path = generator.generate_video(
-        story_data=story,
-        background_query=story['background_query']
-    )
-    
-    if video_path:
-        print("\n" + "=" * 60)
-        print("✅ 每日 Reel 生成成功！")
-        print("=" * 60)
-        print(f"📁 檔案: {video_path}")
-        print(f"📝 標題: {story['title']}")
-        print(f"🏷️  Hashtags: {' '.join(story['hashtags'])}")
-        print()
-        print("💡 下一步:")
-        print("   1. 檢查影片質量")
-        print("   2. 上傳到 Instagram Reels")
-        print("   3. 使用建議的 hashtags")
-        print("=" * 60)
+    try:
+        # 1. Generate story using Gemini
+        story_text = generate_salford_story(today_topic)
+        print(f"\n📖 Story preview:")
+        print("-" * 50)
+        print(story_text)
+        print("-" * 50)
         
-        return 0
-    else:
-        print("\n❌ 影片生成失敗")
-        return 1
+        # 2. Generate search query
+        search_query = get_search_query(today_topic)
+        print(f"\n🔍 Video search query: {search_query}")
+        
+        # 3. Generate video
+        generator = ReelVideoGenerator(PEXELS_API_KEY)
+        
+        # Create filename with date
+        date_str = datetime.now().strftime("%Y%m%d")
+        output_filename = f"salford_reel_{date_str}.mp4"
+        
+        output_path = generator.generate_reel(
+            story_text=story_text,
+            search_query=search_query,
+            output_filename=output_filename
+        )
+        
+        print("\n" + "=" * 50)
+        print("✅ AUTOMATION COMPLETED SUCCESSFULLY!")
+        print("=" * 50)
+        print(f"📹 Video: {output_path}")
+        print(f"📊 Topic: {today_topic}")
+        print(f"📝 Story: {len(story_text.split())} words")
+        print("\n🎉 Ready to upload to Instagram/Facebook!")
+        
+        return output_path
+        
+    except Exception as e:
+        print("\n" + "=" * 50)
+        print("❌ AUTOMATION FAILED")
+        print("=" * 50)
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
-
-if __name__ == '__main__':
-    sys.exit(main())
+if __name__ == "__main__":
+    main()
